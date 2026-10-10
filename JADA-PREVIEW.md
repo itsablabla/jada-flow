@@ -51,3 +51,11 @@ The deployment static scanner flags the upstream optional IndexedDB/session-stor
 ## Remaining limits
 
 This is a temporary workbench preview, not a production deployment or a full-feature security certification. The model credential relay may require renewal. Docker runtime remains unverified. Generic incoming MCP attachment, external service connections, and production hosting remain separate work. Catalog persistence falls back to memory when the browser prohibits storage; workflow persistence remains in the native backend.
+
+## No-thinking configuration and failure diagnostics
+
+The shared workbench Manifest relay overrides every Responses request to `reasoning: { effort: "none" }`, for both the copilot and Agent nodes. The provider accepts this request setting; the relay cannot attest to a model provider's internal processing. A different production relay must preserve this policy explicitly.
+
+Three focused Python tests cover absent reasoning settings, overriding high effort and summary requests while preserving tools/streaming, and rejecting invalid request bodies. Run `python scripts/test-workbench-model-proxy.py` from `apps/server`.
+
+Following a user-reported failed “make an agent” turn, the endpoint responded successfully to a direct check and a fresh browser authoring request succeeded. The earlier error was discarded by a generic catch handler, so its original cause cannot be established retrospectively. Redacted server-side `copilot.failed` diagnostics now retain the underlying error without displaying secrets in the browser. This is not evidence that changing reasoning effort alone repaired the original failure.

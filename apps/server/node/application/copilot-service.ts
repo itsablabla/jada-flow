@@ -213,6 +213,14 @@ export class CopilotService {
     } catch (error) {
       if (error instanceof QuestionNeeded) return
       const status = signal.aborted ? 'canceled' : 'failed'
+      if (!signal.aborted) {
+        const detail = (error instanceof Error ? error.message : 'Unknown engine error')
+          .replaceAll(model.token, '[credential]')
+          .replace(/(?:mnfst_|sk-ant-|sk-)[A-Za-z0-9_-]+/g, '[credential]')
+          .replace(/[A-Za-z0-9_-]{24,}/g, '[identifier]')
+          .slice(0, 500)
+        console.error(JSON.stringify({ category: 'copilot.failed', turnId, detail }))
+      }
       this.store.finish(
         turnId,
         status,

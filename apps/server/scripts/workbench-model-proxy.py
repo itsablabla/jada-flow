@@ -2,6 +2,7 @@
 
 import httpx
 import os
+import json
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import StreamingResponse
 
@@ -10,7 +11,16 @@ app = FastAPI()
 
 @app.get("/health")
 async def health():
-    return {"status": "ready", "purpose": "workbench-only"}
+    return {"status": "ready", "purpose": "workbench-only", "reasoning_effort": "none"}
+
+
+def without_thinking(body: bytes) -> bytes:
+    """Set the Responses API policy for both authoring and Agent node requests."""
+    payload = json.loads(body)
+    if not isinstance(payload, dict):
+        raise ValueError("Request must be a JSON object")
+    payload["reasoning"] = {"effort": "none"}
+    return json.dumps(payload).encode()
 
 
 @app.post("/v1/responses")
@@ -20,6 +30,10 @@ async def responses(request: Request):
     body = await request.body()
     if len(body) > 8 * 1024 * 1024:
         return Response(status_code=413)
+    try:
+        body = without_thinking(body)
+    except (ValueError, TypeError):
+        return Response("Invalid model request", status_code=400)
     client = httpx.AsyncClient(timeout=240)
     origin = os.environ.get("CUSTOM_CRED_APP_MANIFEST_BUILD_URL")
     token = os.environ.get("CUSTOM_CRED_APP_MANIFEST_BUILD_PROXY_AUTH_KEY")
