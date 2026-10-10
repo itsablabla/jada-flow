@@ -15,6 +15,7 @@
       "dependencies": {
         "@hono/node-server": "2.1.1",
         "@mastra/core": "1.64.0",
+        "@modelcontextprotocol/client": "2.0.0",
         "@modelcontextprotocol/server": "2.0.0",
         "@oomol-lab/open-flow": "workspace:*",
         "effect": "4.0.0-rc.113",
@@ -31,7 +32,6 @@
         "zod": "4.6.5",
       },
       "devDependencies": {
-        "@modelcontextprotocol/client": "2.0.0",
         "@oomol-lab/open-flow-command": "workspace:*",
         "@tailwindcss/vite": "^4",
         "@types/node": "^26.0.0",

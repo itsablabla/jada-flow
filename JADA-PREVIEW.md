@@ -50,7 +50,7 @@ The deployment static scanner flags the upstream optional IndexedDB/session-stor
 
 ## Remaining limits
 
-This is a temporary workbench preview, not a production deployment or a full-feature security certification. The model credential relay may require renewal. Docker runtime remains unverified. Generic incoming MCP attachment, external service connections, and production hosting remain separate work. Catalog persistence falls back to memory when the browser prohibits storage; workflow persistence remains in the native backend.
+This is a temporary workbench preview, not a production deployment or a full-feature security certification. The model credential relay may require renewal. Docker runtime remains unverified. Chat-driven MCP attachment is now available within the bounds in `JADA-MCP.md`; no user connections were added during implementation. Production hosting remains separate work. Catalog persistence falls back to memory when the browser prohibits storage; workflow persistence remains in the native backend.
 
 ## No-thinking configuration and failure diagnostics
 

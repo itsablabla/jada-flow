@@ -21,7 +21,8 @@ Working branch: `feat/pipali-integration`.
 - [x] Run the scoped regression, real-provider, failure and browser checks recorded in `JADA-VERIFICATION.md`.
 - [x] Verify npm and CLI package artifacts and record reproduction instructions.
 - [ ] Docker container build/run/restore acceptance: blocked by missing Docker executable in this workbench.
-- [ ] Live external-provider delivery and arbitrary incoming MCP-server support: not certified/implemented.
+- [x] Chat-driven public HTTPS Streamable HTTP MCP discovery, inline bearer authentication, native Agent tool binding and approval-gated execution implemented and fixture-tested. See `JADA-MCP.md`.
+- [ ] Live external-provider delivery, OAuth/stdio/legacy SSE and universal MCP compatibility are not certified.
 
 ## Test inventory
 

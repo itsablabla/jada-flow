@@ -26,7 +26,7 @@ Create or open a Flow. Describe the desired automation in the Pipali panel, then
 
 Chat cannot publish, activate schedules, run workflows, create credentials or approve business actions. Use native connection settings and native Test/Publish controls. Questions and partial drafts persist; after a restart an interrupted authoring turn is reported honestly rather than automatically replayed.
 
-Native Code Tasks implement generated missing logic. The Agent uses only declared Connector tools, result readers and optional isolated `run_code`. Generic external MCP-server attachment, arbitrary shell execution, package self-installation and shared persistent Pipali memories are not implemented.
+Native Code Tasks implement generated missing logic. The Agent uses only declared Connector tools, result readers and optional isolated `run_code`. Chat-driven public HTTPS MCP attachment with optional bearer authentication is implemented through a workflow-scoped connector adapter; see `JADA-MCP.md` for security, testing and protocol limits. Arbitrary shell execution, package self-installation and shared persistent Pipali memories are not implemented.
 
 ## Approval and recovery
 

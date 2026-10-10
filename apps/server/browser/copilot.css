@@ -133,3 +133,28 @@
     flex: 1;
   }
 }
+.jada-mcp-card {
+  margin: 12px 0;
+  padding: 14px;
+  border: 1px solid var(--jada-border, #d3d6da);
+  border-radius: 10px;
+  font-size: 13px;
+}
+.jada-mcp-card p {
+  margin: 8px 0;
+}
+.jada-mcp-url {
+  overflow-wrap: anywhere;
+  opacity: 0.75;
+}
+.jada-mcp-card input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 6px 0 12px;
+  padding: 9px;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--jada-border, #d3d6da);
+  border-radius: 6px;
+}

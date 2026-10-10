@@ -116,6 +116,6 @@ it('stops before mutation and retains the existing graph', async () => {
 
 it('keeps request secret patterns out of conversation persistence', async () => {
   const f = await setup(noTools)
-  expect(() => f.copilot.start('operator', f.flow.flowId, 'r1', `my key: mnfst_${'x'.repeat(32)}`)).toThrow('secure connection')
+  expect(() => f.copilot.start('operator', f.flow.flowId, 'r1', `my key: mnfst_${'x'.repeat(32)}`)).toThrow('secure credential field')
   expect(f.store.list('operator', f.flow.flowId)).toEqual([])
 })

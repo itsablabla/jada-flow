@@ -383,6 +383,11 @@ export class RunExecutor {
                   compute,
                 )
             : executeAgent
+        if (executor.tools.some((tool) => tool.action.startsWith('jada_mcp_') && !tool.approval))
+          throw new ConnectorTaskError(
+            'connector.access-required',
+            'MCP tools must enable approval in the saved Agent configuration before this workflow can run.',
+          )
         return agent(
           task,
           {
@@ -405,6 +410,7 @@ export class RunExecutor {
               scope: 'action',
               action: tool.action,
               connectionId: tool.connectionId,
+              mcpApproved: tool.action.startsWith('jada_mcp_'),
             })
           },
           report,

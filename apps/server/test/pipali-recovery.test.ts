@@ -12,9 +12,13 @@ import { createConnectorHost } from './connectorHost.ts'
 import { acceptRun } from './runFixture.ts'
 import { closeService, openService, startService } from './serviceFixture.ts'
 
-it.skipIf(!process.env.JADA_PIPALI_SOURCE)(
-  'real Pipali survives native server restart across two approvals without repeating effects',
-  async () => {
+it.skipIf(!process.env.JADA_PIPALI_SOURCE).each([
+  { action: 'fixture.send', approval: true },
+  { action: 'jada_mcp_fixture.send', approval: true },
+  { action: 'jada_mcp_fixture.send', approval: false },
+])(
+  'real Pipali survives restart and approvals without repeated effects for $action (declared approval=$approval)',
+  async ({ action, approval }) => {
     const requests: unknown[] = []
     const provider = createServer(async (request, response) => {
       let body = ''
@@ -48,7 +52,7 @@ it.skipIf(!process.env.JADA_PIPALI_SOURCE)(
     const effects: { callId: string; input: Readonly<Record<string, JsonValue>> }[] = []
     const connector = createConnectorHost({
       getAction: async () => ({
-        actionId: 'fixture.send',
+        actionId: action,
         authenticated: false,
         description: 'Fixture only.',
         serviceId: 'fixture',
@@ -100,8 +104,8 @@ it.skipIf(!process.env.JADA_PIPALI_SOURCE)(
                           id: 'send',
                           name: 'send',
                           description: 'Fixture send',
-                          action: 'fixture.send',
-                          approval: true,
+                          action,
+                          approval,
                           inputs: [{ handle: 'body', jsonSchema: { type: 'string' }, nullable: false, source: { kind: 'model' } }],
                         },
                       ],
@@ -114,6 +118,12 @@ it.skipIf(!process.env.JADA_PIPALI_SOURCE)(
         },
       })
       if (accepted.kind !== 'accepted') throw new Error('Run not accepted.')
+      if (!approval) {
+        await expect.poll(() => service.control.runs.getRun(accepted.runId).status).toBe('failed')
+        expect(effects).toEqual([])
+        expect(requests).toEqual([])
+        return
+      }
       await expect.poll(() => service.control.runs.getRun(accepted.runId).waits.length, { timeout: 30000 }).toBe(1)
       expect(effects).toEqual([])
       await expect.poll(() => service.control.runs.getRun(accepted.runId).status).toBe('waiting')

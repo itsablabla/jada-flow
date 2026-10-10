@@ -27,3 +27,4 @@ assets/star-history/star-history.png
 .jada/
 __pycache__/
 *.pyc
+*.mcp-key

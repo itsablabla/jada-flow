@@ -50,6 +50,7 @@ const migrations = [
   '0043_event_source_definitions.sql',
   '0044_service_profiles.sql',
   '0045_jada_copilot.sql',
+  '0046_jada_mcp.sql',
 ] as const
 const migrationsDirectory = new URL(import.meta.url.endsWith('.ts') ? '../../migrations/' : '../migrations/', import.meta.url)
 

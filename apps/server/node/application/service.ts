@@ -26,6 +26,7 @@ import * as Scope from 'effect/Scope'
 import * as Semaphore from 'effect/Semaphore'
 import { ConfiguredConnectorAccessHost, ImplicitConnectorAccessHost } from '../deployment/connector-access.ts'
 import { ConnectorClient, ConnectorTaskError } from '../deployment/connector.ts'
+import { withMcpConnections } from '../deployment/mcp-connector.ts'
 import { ControlError } from '../error.ts'
 import { silentLogger } from '../logger.ts'
 import { IntegrationRuntime } from '../runtime/integration-runtime.ts'
@@ -122,7 +123,10 @@ export class ServerService {
     this.#clock = clock
     this.#clockService = clockService
     this.#logger = logger.child({ component: 'runtime' })
-    this.#resolveConnector = capabilities.connector ?? (() => undefined)
+    this.#resolveConnector = () => {
+      const base = capabilities.connector?.()
+      return store.mcp.hasAny() ? withMcpConnections(store.mcp, base) : base
+    }
     this.#connectorAccess = capabilities.connectorAccess ?? new ImplicitConnectorAccessHost()
     this.#resolveConnectorConsoleOrigin = capabilities.connectorConsoleOrigin ?? (() => undefined)
     this.#resolveIntegration = capabilities.integration ?? (() => undefined)
@@ -252,7 +256,7 @@ export class ServerService {
       (teamId) => this.#connectorTeam(teamId),
       this.#integration.sources,
     )
-    this.copilot = new CopilotService(store.copilot, this.control, this.#resolveLlm)
+    this.copilot = new CopilotService(store.copilot, this.control, this.#resolveLlm, undefined, store.mcp)
   }
 
   static open(database: Database, options: ServerServiceOptions = {}): Effect.Effect<ServerService, Error, Scope.Scope> {

@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 
 import { Button, Textarea } from '@oomol-lab/open-flow/ui'
 import { useEffect, useRef, useState } from 'react'
+import { redactChatSecrets } from '../common/chat-secrets.ts'
 import { idempotencyKey } from './idempotency.ts'
 
 interface Turn {
@@ -18,6 +19,13 @@ interface CopilotEvent {
   kind: string
   delta?: string
   name?: string
+}
+interface McpConnection {
+  connectionId: string
+  url: string
+  label: string
+  status: string
+  toolCount: number
 }
 
 export function JadaLogo() {
@@ -39,6 +47,7 @@ export function CopilotPanel({ flowId, onClose, onConfigure, apiBase = '' }: { f
   const [pending, setPending] = useState(false)
   const [stream, setStream] = useState<Record<string, string>>({})
   const [activity, setActivity] = useState('Ready to build')
+  const [mcpConnections, setMcpConnections] = useState<McpConnection[]>([])
   const after = useRef(0)
   const conversation = useRef<HTMLDivElement>(null)
   const following = useRef(true)
@@ -56,9 +65,10 @@ export function CopilotPanel({ flowId, onClose, onConfigure, apiBase = '' }: { f
       try {
         const response = await fetch(`${endpoint}?after=${after.current}`, { credentials: 'same-origin', signal: controller.signal })
         if (!response.ok) throw new Error(response.status === 401 ? 'Sign in again to continue.' : 'Could not load this conversation.')
-        const data: { turns: Turn[]; configured: boolean; events: CopilotEvent[] } = await response.json()
+        const data: { turns: Turn[]; configured: boolean; events: CopilotEvent[]; mcpConnections?: McpConnection[] } = await response.json()
         setTurns(data.turns)
         setConfigured(data.configured)
+        setMcpConnections(data.mcpConnections ?? [])
         for (const event of data.events) {
           after.current = Math.max(after.current, event.cursor)
           if (event.kind === 'text' && event.delta) setStream((value) => ({ ...value, [event.turnId]: (value[event.turnId] ?? '') + event.delta }))
@@ -82,6 +92,11 @@ export function CopilotPanel({ flowId, onClose, onConfigure, apiBase = '' }: { f
   async function send(event: FormEvent) {
     event.preventDefault()
     if (!draft.trim() || pending || running || !configured) return
+    if (redactChatSecrets(draft) !== draft) {
+      setDraft(redactChatSecrets(draft))
+      setError('Token removed from the message. Send only the MCP URL first, then enter your token in the secure card in this chat.')
+      return
+    }
     setPending(true)
     following.current = true
     setError('')
@@ -155,8 +170,10 @@ export function CopilotPanel({ flowId, onClose, onConfigure, apiBase = '' }: { f
         )}
         {turns.map((turn) => (
           <section className="jada-turn" key={turn.turnId}>
-            <div className="jada-user-message">{turn.message}</div>
-            <div className="jada-agent-message">{turn.answer || stream[turn.turnId] || (turn.status === 'running' ? activity : 'No response recorded.')}</div>
+            <div className="jada-user-message">{redactChatSecrets(turn.message)}</div>
+            <div className="jada-agent-message">
+              {redactChatSecrets(turn.answer || stream[turn.turnId] || (turn.status === 'running' ? activity : 'No response recorded.'))}
+            </div>
             <div className="jada-turn-status" data-status={turn.status}>
               {turn.status === 'completed'
                 ? 'Saved and validated · not executed'
@@ -168,12 +185,24 @@ export function CopilotPanel({ flowId, onClose, onConfigure, apiBase = '' }: { f
                       ? 'Pipali is working'
                       : turn.status}
             </div>
-            {turn.status === 'needs-input' && (
+            {turn.status === 'needs-input' && !/\bmcp\b/i.test(turn.answer) && !mcpConnections.some((connection) => connection.status !== 'active') && (
               <Button variant="outline" onClick={onConfigure}>
                 Open connection settings
               </Button>
             )}
           </section>
+        ))}
+        {mcpConnections.map((connection) => (
+          <McpConnectionCard
+            key={connection.connectionId}
+            connection={connection}
+            endpoint={endpoint}
+            onReady={() => {
+              setDraft(
+                `The MCP connection ${connection.connectionId} is ready. Continue my previous request using its discovered tools. Do not execute anything.`,
+              )
+            }}
+          />
         ))}
       </div>
       <form className="jada-composer" onSubmit={(event) => void send(event)}>
@@ -215,5 +244,61 @@ export function CopilotPanel({ flowId, onClose, onConfigure, apiBase = '' }: { f
         </div>
       </form>
     </aside>
+  )
+}
+
+function McpConnectionCard({ connection, endpoint, onReady }: { connection: McpConnection; endpoint: string; onReady(): void }) {
+  const [token, setToken] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  async function connect(event: FormEvent) {
+    event.preventDefault()
+    if (!token.trim() || busy) return
+    setBusy(true)
+    setError('')
+    try {
+      const response = await fetch(`${endpoint}/mcp/${encodeURIComponent(connection.connectionId)}/auth`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ token }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Could not connect.')
+      setToken('')
+      onReady()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not connect.')
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <section className="jada-mcp-card" aria-label={`MCP connection ${connection.label}`}>
+      <strong>{connection.label}</strong>
+      <p className="jada-mcp-url">{connection.url}</p>
+      {connection.status === 'active' ? (
+        <p>Connected · {connection.toolCount} tools discovered. Ask the copilot to attach the tools you need. Each Agent call requires approval.</p>
+      ) : (
+        <form onSubmit={(event) => void connect(event)}>
+          <p>Finish connecting here. The token is sent only to the backend, encrypted at rest, and never included in chat or model prompts.</p>
+          <label>
+            Bearer token
+            <input
+              aria-label={`Bearer token for ${connection.label}`}
+              type="password"
+              autoComplete="off"
+              value={token}
+              onChange={(event) => setToken(event.target.value)}
+              disabled={busy}
+            />
+          </label>
+          {error && <p role="alert">{error}</p>}
+          <Button type="submit" disabled={busy || !token.trim()}>
+            {busy ? 'Connecting…' : 'Connect MCP'}
+          </Button>
+        </form>
+      )}
+    </section>
   )
 }

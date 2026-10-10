@@ -93,6 +93,7 @@ export interface ConnectorHost {
 }
 
 interface ConnectorContext {
+  readonly mcpApproved?: boolean
   readonly actorId?: string
   readonly flowId?: string
   readonly providerId?: string

@@ -40,5 +40,17 @@ export function createCopilotApp(service: CopilotService, authenticate: (request
     const actor = await authenticate(context.req.raw)
     return context.json({ accepted: service.stop(actor, context.req.param('flowId')) })
   })
+  app.post('/:flowId/copilot/mcp/:connectionId/auth', async (context) => {
+    const actor = await authenticate(context.req.raw)
+    const body = z.strictObject({ token: z.string().min(1).max(8192) }).parse(await context.req.json())
+    try {
+      return context.json(await service.authorizeMcp(actor, context.req.param('flowId'), context.req.param('connectionId'), body.token, context.req.raw.signal))
+    } catch {
+      return context.json(
+        { error: 'Could not connect. Check the server URL and token. Only public HTTPS Streamable HTTP MCP with optional bearer authentication is supported.' },
+        400,
+      )
+    }
+  })
   return app
 }
