@@ -270,6 +270,8 @@ export class FlowStore {
       this.#database.prepare('DELETE FROM flow_presentations WHERE flow_id = ?').run(flowId)
       this.#database.prepare('DELETE FROM flow_connector_teams WHERE flow_id = ?').run(flowId)
       this.#database.prepare('DELETE FROM flow_revisions WHERE flow_id = ?').run(flowId)
+      this.#database.prepare('DELETE FROM jada_copilot_events WHERE turn_id IN (SELECT turn_id FROM jada_copilot_turns WHERE flow_id = ?)').run(flowId)
+      this.#database.prepare('DELETE FROM jada_copilot_turns WHERE flow_id = ?').run(flowId)
       return this.#database.prepare("DELETE FROM flows WHERE flow_id = ? AND status = 'retiring'").run(flowId).changes == 1
     })
   }

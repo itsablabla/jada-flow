@@ -212,6 +212,8 @@ export type FlowRunOptions = {
   readonly runId: string
   readonly waits?: WaitHost
   readonly remainingMs?: number
+  /** Host policy: zero freezes idle waiting runs immediately for durable recovery. */
+  readonly waitRetentionMs?: number
 } & RunLaunch
 
 export type RunLaunch =
@@ -248,6 +250,7 @@ interface RunContext {
   readonly projectFailure: FlowRunOptions['projectFailure']
   readonly waits: WaitHost | undefined
   readonly remainingMs: number | undefined
+  readonly waitRetentionMs: number
 }
 
 function nodePorts(node: ExecutableNode): Readonly<Record<string, InputPortDefinition>> {
@@ -997,7 +1000,7 @@ function runGraph(
         if (running == 0 && pendingWaits.size == 0 && ready.length == 0) break
         if (running > 0 || ready.length > 0) idleSince = undefined
         else idleSince ??= now
-        const left = idleSince == null ? remainingMs : waitRetentionMs - (now - idleSince)
+        const left = idleSince == null ? remainingMs : context.waitRetentionMs - (now - idleSince)
         if (idleSince != null && left! <= 0) {
           const checkpoint: FlowRunCheckpoint = {
             bindingValues: context.bindingValues,
@@ -1043,6 +1046,12 @@ function runGraph(
 export function runFlow(prepared: PreparedFlow, options: FlowRunOptions): Effect.Effect<FlowRunOutcome, Error> {
   const emit = options.emit ?? (() => Effect.void)
   const program = Effect.gen(function* () {
+    if (
+      options.waitRetentionMs != null &&
+      (!Number.isSafeInteger(options.waitRetentionMs) || options.waitRetentionMs < 0 || options.waitRetentionMs > waitRetentionMs)
+    ) {
+      return yield* Effect.fail(new Error('Wait retention must be an integer between zero and the default retention.'))
+    }
     if (options.resume != null && (options.inputs != null || options.trigger != null || options.bindingValues != null)) {
       return yield* Effect.fail(new Error('A resumed Flow Run cannot accept launch inputs, binding values, or a Trigger seed.'))
     }
@@ -1069,6 +1078,7 @@ export function runFlow(prepared: PreparedFlow, options: FlowRunOptions): Effect
         projectFailure: options.projectFailure,
         waits: options.waits,
         remainingMs: options.remainingMs,
+        waitRetentionMs: options.waitRetentionMs ?? waitRetentionMs,
       },
       { flowId: options.flowId, graph: prepared.graph },
       options.runId,

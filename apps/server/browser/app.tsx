@@ -6,13 +6,14 @@ import type { ConnectionConsole } from './connectionNavigation.ts'
 import type { LoginCredentials } from './login.tsx'
 
 import { ControlClient } from '@oomol-lab/open-flow/control-api'
-import { Button, HostNavigationActions, OpenFlowLogo, notificationToasterProps } from '@oomol-lab/open-flow/ui'
+import { Button, HostNavigationActions, notificationToasterProps } from '@oomol-lab/open-flow/ui'
 import { EventSourcesPage, OpenFlowSessionGate, OpenFlowWorkbench } from '@oomol-lab/open-flow/workbench'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { Toaster } from 'sonner'
 import { I18nProvider, useTranslate } from 'val-i18n-react'
 import { AgentAccessPage } from './agent-access.tsx'
 import { connectionHref } from './connectionNavigation.ts'
+import { CopilotPanel, JadaLogo } from './copilot.tsx'
 import { HostPage, HostPageLayout, HostPageTabs } from './host-ui.tsx'
 import { createBrowserHost } from './host.ts'
 import { createI18n } from './i18n.ts'
@@ -148,6 +149,7 @@ function connectorTeams(value: unknown):
 }
 
 function Shell({ language, onLanguageChange, theme, themeMode, onThemeModeChange }: Props): ReactElement {
+  const [copilotOpen, setCopilotOpen] = useState(true)
   const [routeUrl, setRouteUrl] = useState(() => window.location.pathname + window.location.search)
   const pathname = routeUrl.split('?')[0]
   const routeContext = useMemo(() => parseRouteContext(routeUrl), [routeUrl])
@@ -458,10 +460,10 @@ function Shell({ language, onLanguageChange, theme, themeMode, onThemeModeChange
         <>
           <header className="server-nav">
             <div className="server-nav-title">
-              <OpenFlowLogo theme={theme} alt="" />
-              Open Flow Server
+              <JadaLogo />
+              Jada Flow
             </div>
-            <nav aria-label="Open Flow Server">
+            <nav aria-label="Jada Flow">
               <a aria-current={variablesOpen || settingsOpen || agentAccessOpen ? undefined : 'page'} href="/" onClick={(event) => followPage(event, '/')}>
                 {t('shell.flows')}
               </a>
@@ -481,6 +483,11 @@ function Shell({ language, onLanguageChange, theme, themeMode, onThemeModeChange
               </a>
             </nav>
             <div className="server-nav-actions">
+              {route.flowId && (
+                <Button variant="ghost" onClick={() => setCopilotOpen((value) => !value)}>
+                  Copilot
+                </Button>
+              )}
               <HostNavigationActions
                 language={language}
                 onLanguageChange={onLanguageChange}
@@ -539,28 +546,40 @@ function Shell({ language, onLanguageChange, theme, themeMode, onThemeModeChange
             ) : variablesOpen ? (
               <VariablesPage client={client} language={language} />
             ) : (
-              <OpenFlowWorkbench
-                createFlow={team.kind == 'ready' && team.selectedTeamId != null ? createHostedFlow : undefined}
-                createFlowDisabled={team.kind != 'hidden' && (team.kind != 'ready' || team.selectedTeamId == null)}
-                createFlowField={createFlowField}
-                flowBadges={flowBadges}
-                connectionHref={
-                  administrator
-                    ? (flowId, providerId, connectionId) => connectionHref(connectionConsole, connectorOwnerForFlow(flowId), providerId, connectionId)
-                    : undefined
-                }
-                hrefFor={(location) => routePath(location, connectorOwnerForFlow(location.flowId))}
-                host={host}
-                language={language}
-                location={route}
-                onConfigureConnector={administrator ? () => openPage('/settings') : undefined}
-                onLanguageChange={onLanguageChange}
-                onNavigate={navigate}
-                preferences={preferences}
-                sessionKey={session.user.userId}
-                theme={theme}
-                variables
-              />
+              <div className="jada-workspace">
+                <div className="jada-canvas">
+                  <OpenFlowWorkbench
+                    createFlow={team.kind == 'ready' && team.selectedTeamId != null ? createHostedFlow : undefined}
+                    createFlowDisabled={team.kind != 'hidden' && (team.kind != 'ready' || team.selectedTeamId == null)}
+                    createFlowField={createFlowField}
+                    flowBadges={flowBadges}
+                    connectionHref={
+                      administrator
+                        ? (flowId, providerId, connectionId) => connectionHref(connectionConsole, connectorOwnerForFlow(flowId), providerId, connectionId)
+                        : undefined
+                    }
+                    hrefFor={(location) => routePath(location, connectorOwnerForFlow(location.flowId))}
+                    host={host}
+                    language={language}
+                    location={route}
+                    onConfigureConnector={administrator ? () => openPage('/settings') : undefined}
+                    onLanguageChange={onLanguageChange}
+                    onNavigate={navigate}
+                    preferences={preferences}
+                    sessionKey={session.user.userId}
+                    theme={theme}
+                    variables
+                  />
+                </div>
+                {route.flowId && copilotOpen && (
+                  <CopilotPanel
+                    key={`${session.user.userId}:${route.flowId}`}
+                    flowId={route.flowId}
+                    onClose={() => setCopilotOpen(false)}
+                    onConfigure={() => openPage('/settings')}
+                  />
+                )}
+              </div>
             )}
           </div>
         </>
@@ -596,7 +615,7 @@ function Shell({ language, onLanguageChange, theme, themeMode, onThemeModeChange
           }
           onTokenChange={session.configured === true || session.setupRequired === true ? setToken : undefined}
           pending={submitting}
-          title="Open Flow Server"
+          title="Jada Flow"
           token={session.configured === true || session.setupRequired === true ? token : undefined}
           tokenLabel={
             session.setupRequired === true

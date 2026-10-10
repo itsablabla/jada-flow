@@ -22,3 +22,8 @@ assets/star-history/star-history.png
 
 # Generated local Flow skill.
 /.agents/skills/open-flow/
+
+# Private Jada workbench engine checkout, credentials and process state.
+.jada/
+__pycache__/
+*.pyc

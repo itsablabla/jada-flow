@@ -69,6 +69,7 @@ export type InvokeRequest =
         readonly flowId: string
         readonly prepared: PreparedFlow
         readonly remainingMs?: number
+        readonly waitRetentionMs?: number
         readonly runId: string
       }
       readonly limits: IsolatedVmLimits
@@ -237,6 +238,7 @@ export class IsolatedVmHost {
       readonly flowId: string
       readonly wait?: (operation: WaitOperation, signal: AbortSignal) => Promise<unknown>
       readonly remainingMs?: number
+      readonly waitRetentionMs?: number
       readonly invokeTask: (invocation: Extract<TaskInvocation, { readonly kind: 'managed' }> & { readonly signal: AbortSignal }) => Promise<unknown>
       readonly projectFailure: (error: unknown) => SchedulerFailure
       readonly runId: string

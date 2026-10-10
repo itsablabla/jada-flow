@@ -7,6 +7,7 @@ import { renderPrompt } from '@oomol-lab/open-flow/flow-semantics'
 export interface LlmConfig {
   readonly origin: string
   readonly token: string
+  readonly agentEngine?: 'pipali' | 'mastra'
 }
 
 export type LlmHost = InvokeLlmTask & { readonly config?: LlmConfig; readonly decision?: InvokeDecisionTask }
@@ -14,6 +15,9 @@ export type LlmHost = InvokeLlmTask & { readonly config?: LlmConfig; readonly de
 const defaultModel = 'oomol-chat'
 
 export function createLlm(origin: string, token: string): LlmHost {
+  if (process.env.JADA_AGENT_ENGINE != null && !['pipali', 'mastra'].includes(process.env.JADA_AGENT_ENGINE)) {
+    throw new Error('JADA_AGENT_ENGINE must be pipali or mastra.')
+  }
   const url = new URL(origin)
   const loopback = url.hostname == '127.0.0.1' || url.hostname == '::1' || url.hostname == '[::1]' || url.hostname == 'localhost'
   if (
@@ -28,7 +32,7 @@ export function createLlm(origin: string, token: string): LlmHost {
   }
   if (token.length == 0) throw new Error('OPEN_FLOW_LLM_TOKEN must not be empty.')
   return Object.assign(invokeLlm(new URL('v1/', url), token), {
-    config: { origin: url.origin, token },
+    config: { origin: url.origin, token, ...(process.env.JADA_AGENT_ENGINE === 'pipali' ? { agentEngine: 'pipali' as const } : {}) },
     decision: invokeDecision(new URL('v1/systemone', url), token),
   })
 }

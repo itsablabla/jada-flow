@@ -2,6 +2,7 @@ import type { LlmConfig } from '../deployment/llm.ts'
 import type { Database } from './database.ts'
 
 import { ConnectorTeamStore } from './connector-team-store.ts'
+import { CopilotStore } from './copilot-store.ts'
 import { EventSourceStore } from './event-source-store.ts'
 import { FlowStore } from './flow-store.ts'
 import { IntegrationStore } from './integration-store.ts'
@@ -27,6 +28,7 @@ const defaultMaxPendingRuns = 1_000
  * `store.variables`, and so on — instead of through one flat surface.
  */
 export class Store {
+  readonly copilot: CopilotStore
   readonly connectorTeams: ConnectorTeamStore
   readonly eventSources: EventSourceStore
   readonly flows: FlowStore
@@ -50,6 +52,7 @@ export class Store {
   ) {
     const connection = database.connection
     const transaction = <Value>(operation: () => Value): Value => database.transaction(operation)
+    this.copilot = new CopilotStore(connection)
 
     this.users = new UserStore(connection)
     this.eventSources = new EventSourceStore(connection, transaction, clock)

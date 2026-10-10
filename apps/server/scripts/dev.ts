@@ -83,7 +83,7 @@ export function developmentBackendPlugin(): Plugin {
       )
       if (configuredOperatorToken == null) {
         const action = developmentToken.created ? 'created' : 'reused'
-        process.stdout.write(`Server operator token (${action} at ${path.relative(appRoot, operatorTokenPath)}): ${developmentToken.token}\n`)
+        process.stdout.write(`Server operator token ${action}; read it securely from ${path.relative(appRoot, operatorTokenPath)}. Value is not logged.\n`)
       }
 
       try {

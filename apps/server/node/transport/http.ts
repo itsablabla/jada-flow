@@ -21,6 +21,7 @@ import { AcceptanceError, ControlError, serverErrorCode } from '../error.ts'
 import { errorKind, silentLogger } from '../logger.ts'
 import { createConnectorProxyApp } from './connector-proxy.ts'
 import { createControlApp } from './control.ts'
+import { createCopilotApp } from './copilot.ts'
 import { handleIntegration } from './integration.ts'
 import { createMcpApp } from './mcp.ts'
 import { serverPaths } from './server-paths.ts'
@@ -198,6 +199,7 @@ export function createServerApp(service: ServerService, options: ServerAppOption
     return method == 'HEAD' ? new Response(null, { headers: response.headers, status: response.status }) : response
   })
   app.route('/v1/mcp', createMcpApp(service, authenticate, logger, options.shutdownSignal))
+  app.route('/v1/flows', createCopilotApp(service.copilot, authenticate, options.shutdownSignal))
   app.route(
     '/v1/connector/proxy',
     createConnectorProxyApp({

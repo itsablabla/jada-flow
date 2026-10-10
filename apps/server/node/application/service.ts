@@ -33,6 +33,7 @@ import { IsolatedVmHost } from '../runtime/isolated-vm.ts'
 import { ListenerRuntime } from '../runtime/listener-runtime.ts'
 import { Store } from '../storage/store.ts'
 import { ControlService } from './control-service.ts'
+import { CopilotService } from './copilot-service.ts'
 import { CronDriver } from './cron-driver.ts'
 import { validatedFlow } from './flow-validation.ts'
 import { Maintenance } from './maintenance.ts'
@@ -71,6 +72,7 @@ async function loadTeams(
 }
 
 export class ServerService {
+  readonly copilot: CopilotService
   readonly publisher: Publisher
   readonly control: ControlService
   readonly #clock: () => number
@@ -250,6 +252,7 @@ export class ServerService {
       (teamId) => this.#connectorTeam(teamId),
       this.#integration.sources,
     )
+    this.copilot = new CopilotService(store.copilot, this.control, this.#resolveLlm)
   }
 
   static open(database: Database, options: ServerServiceOptions = {}): Effect.Effect<ServerService, Error, Scope.Scope> {

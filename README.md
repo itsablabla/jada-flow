@@ -1,3 +1,8 @@
+# Jada Flow
+
+Pipali-powered workflow authoring and native Agent execution, built on OpenFlow.
+See [Jada setup, tests and runtime boundaries](JADA.md). The upstream documentation and attribution remain below.
+
 <div align="center">
 
 <img src="assets/logo/open-flow-wordmark-auto.svg" alt="Open Flow" width="280" height="64" />

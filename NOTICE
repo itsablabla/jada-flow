@@ -26,6 +26,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+Jada Flow Pipali integration
+Pipali: https://github.com/khoj-ai/pipali
+Pinned integration source: d1efc3cc315c1a0ece86ff490af9e0ff7788219d
+Pipali is distributed under the Apache License, Version 2.0. Its original
+license is retained with the prepared source and container runtime.
+Jada's host integration changes are recorded in patches/pipali-host.patch.
+
 Qlementine Icons
 Copyright (c) 2023 Olivier Cléro
 

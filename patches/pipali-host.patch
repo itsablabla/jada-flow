@@ -1,0 +1,57 @@
+diff --git a/src/server/processor/director/index.ts b/src/server/processor/director/index.ts
+index 1c0b6c5..27bc917 100644
+--- a/src/server/processor/director/index.ts
++++ b/src/server/processor/director/index.ts
+@@ -114,6 +114,9 @@ export function truncateToolOutput(
+ }
+ 
+ interface ResearchConfig {
++    /** An embedding host owns all capabilities when this interface is supplied. */
++    hostTools?: ToolDefinition[];
++    hostDispatch?: (calls: ATIFToolCall[]) => Promise<ATIFObservationResult[]>;
+     chatHistory: ATIFTrajectory;
+     maxIterations: number;
+     currentIteration?: number;
+@@ -736,12 +739,12 @@ async function pickNextTool(
+ 
+     // Get all tools (built-in + delegation + MCP). A delegated task does its own work
+     // rather than splitting it further, so delegation is withheld there.
+-    const tools = await getAllTools(
++    const tools = config.hostTools ?? await getAllTools(
+         config.loadedMcpTools,
+         config.providerToolSearch,
+         config.conversationRole,
+     );
+-    const toolChoice = isLast ? 'none' : 'auto';
++    const toolChoice = isLast || tools.length === 0 ? 'none' : 'auto';
+ 
+     const now = new Date();
+     const systemPrompt = config.systemPrompt ?? await buildSystemPrompt({
+@@ -1210,7 +1213,7 @@ export async function* research(config: ResearchConfig): AsyncGenerator<Research
+         }
+     }
+ 
+-    for (let i = 0; i < config.maxIterations; i++) {
++    for (let i = config.currentIteration ?? 0; i < config.maxIterations; i++) {
+         // Check if paused before starting new iteration
+         if (config.abortSignal?.aborted) {
+             throw new ResearchPausedError();
+@@ -1356,7 +1359,17 @@ export async function* research(config: ResearchConfig): AsyncGenerator<Research
+             chatModelId: config.chatModelId,
+             abortSignal: config.abortSignal,
+         };
+-        iteration.toolResults = await executeToolsInParallel(iteration.toolCalls, executionContext, config.abortSignal);
++        if (config.hostTools !== undefined) {
++            if (!config.hostDispatch) throw new Error('Embedding host dispatcher is required');
++            const declared = new Set(config.hostTools.map(tool => tool.name));
++            if (iteration.toolCalls.some(call => !declared.has(call.function_name))) {
++                throw new Error('Embedding host rejected an undeclared capability');
++            }
++            // A host suspension/fatal outcome must propagate, never become tool-result text.
++            iteration.toolResults = await config.hostDispatch(iteration.toolCalls);
++        } else {
++            iteration.toolResults = await executeToolsInParallel(iteration.toolCalls, executionContext, config.abortSignal);
++        }
+ 
+         // Merge tool execution metrics with director's LLM metrics
+         if (metricsAccumulator.prompt_tokens > 0 || metricsAccumulator.completion_tokens > 0) {

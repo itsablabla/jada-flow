@@ -20,6 +20,7 @@ import { executeCode } from '../deployment/agent-code.ts'
 import { executeAgent } from '../deployment/agent.ts'
 import { checkCodeActions, checkCodePermissions, ConnectorTaskError } from '../deployment/connector.ts'
 import { executeOpenApi } from '../deployment/openapi.ts'
+import { executePipaliAgent } from '../deployment/pipali-agent.ts'
 import { errorKind } from '../logger.ts'
 import { isolatedVmEngineDigest, IsolatedVmHost } from '../runtime/isolated-vm.ts'
 
@@ -246,6 +247,7 @@ export class RunExecutor {
           flowId: run.flowId,
           ...launch,
           remainingMs: budgetMs,
+          ...(run.llmConfig?.agentEngine === 'pipali' ? { waitRetentionMs: 0 } : {}),
           wait: async (operation, signal) => {
             if (operation.kind == 'resolutions')
               return operation.block
@@ -368,7 +370,20 @@ export class RunExecutor {
         const model = run.llmConfig
         if (model == null) throw new TaskHostError('llm.unavailable', 'The fixed Agent model configuration is unavailable.')
         const connector = this.#resolveConnector()
-        return executeAgent(
+        const agent: typeof executeAgent =
+          model.agentEngine === 'pipali'
+            ? (definition, agentInvocation, _model, call, events, results, compute) =>
+                executePipaliAgent(
+                  definition,
+                  agentInvocation,
+                  { origin: new URL('v1/', model.origin).href, token: model.token, name: executor.model },
+                  call,
+                  events,
+                  results,
+                  compute,
+                )
+            : executeAgent
+        return agent(
           task,
           {
             input: invocation.input,

@@ -1,0 +1,135 @@
+.jada-workspace {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+.jada-canvas {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+.jada-logo {
+  flex: none;
+}
+.jada-copilot {
+  width: 360px;
+  max-width: 100vw;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--ui-border);
+  background: var(--ui-background);
+  color: var(--ui-foreground);
+  font-size: 13px;
+}
+.jada-copilot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--ui-border);
+}
+.jada-copilot-header span {
+  display: block;
+  color: var(--ui-muted-foreground);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.jada-conversation {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 16px;
+}
+.jada-copilot-intro {
+  display: grid;
+  gap: 16px;
+  padding-top: 24px;
+}
+.jada-copilot-intro h2 {
+  font-size: 18px;
+  margin: 0;
+}
+.jada-copilot-intro p {
+  color: var(--ui-muted-foreground);
+  line-height: 1.6;
+  margin: 0;
+}
+.jada-copilot-intro button {
+  padding: 12px;
+  text-align: left;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+.jada-copilot-intro button:hover {
+  background: var(--ui-muted);
+}
+.jada-turn {
+  margin-bottom: 24px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.jada-user-message {
+  padding: 12px;
+  background: var(--ui-muted);
+  border-radius: var(--ui-radius);
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+}
+.jada-agent-message {
+  white-space: pre-wrap;
+}
+.jada-turn-status {
+  color: var(--ui-muted-foreground);
+  margin-top: 8px;
+  font-size: 12px;
+}
+.jada-composer {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-top: 1px solid var(--ui-border);
+}
+.jada-composer textarea {
+  resize: vertical;
+  max-height: 180px;
+}
+.jada-composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.jada-composer-actions span {
+  color: var(--ui-muted-foreground);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.jada-copilot-error {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+}
+@media (max-width: 760px) {
+  .jada-copilot {
+    position: absolute;
+    inset: 44px 0 0;
+    width: 100%;
+    z-index: 40;
+  }
+  .server-nav {
+    gap: 8px;
+    padding-inline: 8px;
+  }
+  .server-nav nav {
+    overflow-x: auto;
+    min-width: 0;
+    flex: 1;
+  }
+}

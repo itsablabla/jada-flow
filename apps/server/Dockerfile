@@ -14,16 +14,25 @@ RUN bun install --frozen-lockfile
 
 COPY . .
 RUN bun run --filter @oomol-lab/open-flow-server build
+RUN bash apps/server/scripts/setup-pipali.sh
 
 FROM node:26-bookworm-slim AS runtime
 
 ENV NODE_ENV=production \
   OPEN_FLOW_DATA_DIR=/data/open-flow \
   OPEN_FLOW_HOST=0.0.0.0 \
-  OPEN_FLOW_PORT=3000
+  OPEN_FLOW_PORT=3000 \
+  OPEN_FLOW_MAX_CONCURRENT_RUNS=2 \
+  JADA_AGENT_ENGINE=pipali \
+  JADA_PIPALI_SOURCE=/opt/pipali \
+  JADA_PIPALI_WORKER=/app/pipali-worker.ts \
+  JADA_BUN_BIN=/usr/local/bin/bun
 
 WORKDIR /app
 COPY --from=build /workspace/apps/server/dist/ ./
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=build /workspace/.jada/pipali /opt/pipali
+COPY --from=build /workspace/apps/server/scripts/pipali-worker.ts /app/pipali-worker.ts
 RUN mkdir -p /data/open-flow
 
 VOLUME ["/data/open-flow"]

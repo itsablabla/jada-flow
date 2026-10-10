@@ -31,7 +31,7 @@ export function Login({
     <main className="host-surface server-login">
       <form className="server-login-form" onSubmit={submit} aria-busy={pending}>
         <header>
-          <h1>Open Flow Server</h1>
+          <h1>Jada Flow</h1>
           <p>{t(operator ? 'session.configured' : 'session.userDescription')}</p>
         </header>
         <fieldset disabled={pending}>
