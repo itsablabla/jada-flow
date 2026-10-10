@@ -1,0 +1,34 @@
+.jada-preview-label {
+  color: var(--ui-muted-foreground);
+  font-size: 12px;
+}
+.jada-preview-loading {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  flex: 1;
+  gap: 16px;
+  padding: 24px;
+  text-align: center;
+}
+.jada-preview-loading h1 {
+  font-size: 20px;
+  margin: 0;
+}
+.jada-preview-loading p {
+  max-width: 480px;
+  line-height: 1.6;
+}
+.jada-preview-notice {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--ui-border);
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  .jada-preview-label {
+    display: none;
+  }
+}

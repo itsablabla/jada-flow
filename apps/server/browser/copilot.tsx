@@ -31,7 +31,7 @@ export function JadaLogo() {
   )
 }
 
-export function CopilotPanel({ flowId, onClose, onConfigure }: { flowId: string; onClose(): void; onConfigure(): void }) {
+export function CopilotPanel({ flowId, onClose, onConfigure, apiBase = '' }: { flowId: string; onClose(): void; onConfigure(): void; apiBase?: string }) {
   const [turns, setTurns] = useState<Turn[]>([])
   const [draft, setDraft] = useState('')
   const [error, setError] = useState('')
@@ -42,7 +42,7 @@ export function CopilotPanel({ flowId, onClose, onConfigure }: { flowId: string;
   const after = useRef(0)
   const conversation = useRef<HTMLDivElement>(null)
   const following = useRef(true)
-  const endpoint = `/v1/flows/${encodeURIComponent(flowId)}/copilot`
+  const endpoint = `${apiBase}/v1/flows/${encodeURIComponent(flowId)}/copilot`
   const running = turns.some((turn) => turn.status === 'running')
 
   useEffect(() => {

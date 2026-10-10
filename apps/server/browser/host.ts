@@ -10,6 +10,7 @@ export function createBrowserHost(
   notify: (notification: WorkbenchNotification | undefined) => void,
   sessionExpired: () => void,
   connectorOwnerId?: string,
+  apiBase = '',
 ): WorkbenchHost {
   return {
     connectorOwnerId,
@@ -27,15 +28,16 @@ export function createBrowserHost(
     },
     notify,
     request: async (input, init) => {
-      const response = await fetch(input, { ...init, credentials: 'same-origin' })
+      const target = typeof input === 'string' && input.startsWith('/') ? `${apiBase}${input}` : input
+      const response = await fetch(target, { ...init, credentials: 'same-origin' })
       if (response.status == 401) sessionExpired()
       return response
     },
     subscribeFlow(flowId, listener) {
-      return follow(`/v1/flows/${encodeURIComponent(flowId)}/notifications`, listener, decodeFlowEvent, sessionExpired)
+      return follow(`${apiBase}/v1/flows/${encodeURIComponent(flowId)}/notifications`, listener, decodeFlowEvent, sessionExpired)
     },
     subscribeFlowCatalog(listener) {
-      return follow('/v1/flows/notifications', listener, decodeCatalogEvent, sessionExpired)
+      return follow(`${apiBase}/v1/flows/notifications`, listener, decodeCatalogEvent, sessionExpired)
     },
   }
 }
