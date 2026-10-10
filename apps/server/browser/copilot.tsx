@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 
 import { Button, Textarea } from '@oomol-lab/open-flow/ui'
 import { useEffect, useRef, useState } from 'react'
-import { redactChatSecrets } from '../common/chat-secrets.ts'
+import { parseMcpConnectionMessage, redactChatSecrets } from '../common/chat-secrets.ts'
 import { idempotencyKey } from './idempotency.ts'
 
 interface Turn {
@@ -53,6 +53,8 @@ export function CopilotPanel({ flowId, onClose, onConfigure, apiBase = '' }: { f
   const following = useRef(true)
   const endpoint = `${apiBase}/v1/flows/${encodeURIComponent(flowId)}/copilot`
   const running = turns.some((turn) => turn.status === 'running')
+  const directConnection = parseMcpConnectionMessage(draft)
+  const canSend = configured || directConnection != null
 
   useEffect(() => {
     if (following.current && conversation.current) conversation.current.scrollTop = conversation.current.scrollHeight
@@ -91,28 +93,34 @@ export function CopilotPanel({ flowId, onClose, onConfigure, apiBase = '' }: { f
 
   async function send(event: FormEvent) {
     event.preventDefault()
-    if (!draft.trim() || pending || running || !configured) return
-    if (redactChatSecrets(draft) !== draft) {
+    if (!draft.trim() || pending || running || !canSend) return
+    if (!directConnection && redactChatSecrets(draft) !== draft) {
       setDraft(redactChatSecrets(draft))
-      setError('Token removed from the message. Send only the MCP URL first, then enter your token in the secure card in this chat.')
+      setError(
+        'To connect directly, paste: add MCP https://your-server/mcp, followed by Bearer and the token. The token will be handled outside the conversation.',
+      )
       return
     }
     setPending(true)
+    if (directConnection) {
+      setDraft('')
+      setActivity('Connecting MCP')
+    }
     following.current = true
     setError('')
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetch(directConnection ? `${endpoint}/mcp/connect` : endpoint, {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ message: draft.trim(), requestId: idempotencyKey() }),
+        body: JSON.stringify(directConnection ? { ...directConnection, requestId: idempotencyKey() } : { message: draft.trim(), requestId: idempotencyKey() }),
       })
       if (!response.ok) {
         const data = await response.json().catch(() => null)
         throw new Error(data?.error?.message ?? data?.error ?? 'Could not start. Check the model connection and try again.')
       }
       setDraft('')
-      setActivity('Starting Pipali')
+      setActivity(directConnection ? 'MCP connection checked' : 'Starting Pipali')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not start.')
     } finally {
@@ -224,7 +232,7 @@ export function CopilotPanel({ flowId, onClose, onConfigure, apiBase = '' }: { f
           onKeyDown={(event) => {
             if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing || event.keyCode === 229) return
             event.preventDefault()
-            if (!event.repeat && !pending && !running && configured && draft.trim()) event.currentTarget.form?.requestSubmit()
+            if (!event.repeat && !pending && !running && canSend && draft.trim()) event.currentTarget.form?.requestSubmit()
           }}
           placeholder="Tell Pipali what you want to automate…"
           rows={3}
@@ -237,8 +245,8 @@ export function CopilotPanel({ flowId, onClose, onConfigure, apiBase = '' }: { f
               Stop
             </Button>
           ) : (
-            <Button type="submit" disabled={!draft.trim() || pending || !configured}>
-              {pending ? 'Starting…' : 'Build'}
+            <Button type="submit" disabled={!draft.trim() || pending || !canSend}>
+              {pending ? 'Working…' : 'Build'}
             </Button>
           )}
         </div>

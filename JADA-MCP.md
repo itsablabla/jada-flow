@@ -4,9 +4,9 @@ MCP setup is initiated in the copilot conversation. No server or tools are prein
 
 ## User flow
 
-1. Type `add MCP https://your-server.example/mcp`, `connect https://your-server.example/mcp`, or describe the connection request naturally.
+1. Paste `add MCP https://your-server.example/mcp` followed by `Bearer YOUR_TOKEN` in the same composer and press Enter. The composer splits the credential into a dedicated connection request; it is not submitted as model chat text.
 2. Exact add/connect/attach URL commands use a deterministic connection path in the copilot service, without waiting for a model to infer a settings workflow.
-3. Public tools are discovered immediately. A server requiring authentication presents an inline password field in the conversation. Enter the bearer token there, not in the chat composer.
+3. Authenticated tools are discovered in that single submission. URL-only requests are also supported; if authentication is required, an inline password field remains available as an optional alternative.
 4. Once connected, ask the copilot to add the appropriate discovered tools to a named Agent. The copilot has `mcp_list` and paginated `mcp_tools` capabilities and uses native revision-pinned `flow_edit` operations.
 5. Start a test run and review individual tool-call approvals in the native run panel.
 
@@ -29,10 +29,10 @@ OAuth, stdio process launching, legacy SSE-only endpoints, custom authentication
 
 ## Verification
 
-- Nine MCP-focused tests cover public/private network guards, tool discovery, encrypted credentials, restart decryption, workflow isolation, approval-path enforcement, non-retry behavior, native Agent graph authoring and secret redaction.
+- Eleven MCP-focused tests cover public/private network guards, tool discovery, encrypted credentials, restart decryption, workflow isolation, approval-path enforcement, non-retry behavior, native Agent graph authoring, secret redaction and direct URL-plus-token submission.
 - A real local JSON-RPC fixture exercises SDK initialization, initialized notification, two-page tool discovery and a tool call. It uses only synthetic credentials and has no external integrations.
 - Three real Pipali runtime tests cover ordinary tool approvals, MCP-prefixed tools with approval/restart/rejection, and rejection of an MCP declaration that omits approval before any provider call.
 - The copilot and database-migration suites pass with the new migration.
-- Browser tests verify the inline password card, secure-endpoint submission, ready-to-continue draft, rejection of credentials in chat, mobile layout and the absence of the misleading MCP Settings button.
+- Browser tests verify single-Enter URL-plus-token submission to the dedicated endpoint without a chat message or blocking alert. They also cover the optional password card, secure-endpoint submission, mobile layout and the absence of the misleading MCP Settings button.
 
 No user MCP server was connected or called during this implementation. Live compatibility with a particular external server is established only when the user chooses to connect it.

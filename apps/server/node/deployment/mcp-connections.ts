@@ -68,10 +68,9 @@ export class McpConnections {
     cipher.setAuthTag(bytes.subarray(12, 28))
     return Buffer.concat([cipher.update(bytes.subarray(28)), cipher.final()]).toString()
   }
-  async connect(flowId: string, url: string, label?: string, signal?: AbortSignal) {
+  private prepare(flowId: string, url: string, label?: string): Row {
     const normalized = publicMcpUrl(url).href
     let row = this.rows(flowId).find((item) => item.url === normalized)
-    if (row?.status === 'active') return this.list(flowId).find((item) => item.connectionId === row!.connection_id)!
     if (!row) {
       if (this.rows(flowId).length >= 10) throw new Error('This workflow already has ten MCP connections.')
       const id = `jada_mcp_${randomUUID().replaceAll('-', '')}`
@@ -80,6 +79,16 @@ export class McpConnections {
         .run(id, flowId, normalized, label?.slice(0, 80) || new URL(normalized).hostname, 'needs-auth')
       row = this.rows(flowId).find((item) => item.connection_id === id)!
     }
+    return row
+  }
+  async connectWithToken(flowId: string, url: string, token: string, signal?: AbortSignal) {
+    if (!token.trim() || token.length > 8192 || /[\r\n]/.test(token)) throw new Error('Invalid bearer token.')
+    const row = this.prepare(flowId, url)
+    return this.authorize(flowId, row.connection_id, token, signal)
+  }
+  async connect(flowId: string, url: string, label?: string, signal?: AbortSignal) {
+    const row = this.prepare(flowId, url, label)
+    if (row.status === 'active') return this.list(flowId).find((item) => item.connectionId === row.connection_id)!
     try {
       await this.discover(row, undefined, signal)
     } catch {

@@ -3,6 +3,7 @@ import type { CopilotService } from '../application/copilot-service.ts'
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { z } from 'zod'
+import { parseMcpConnectionMessage } from '../../common/chat-secrets.ts'
 
 export function createCopilotApp(service: CopilotService, authenticate: (request: Request) => Promise<string>, shutdown?: AbortSignal) {
   const app = new Hono()
@@ -33,12 +34,25 @@ export function createCopilotApp(service: CopilotService, authenticate: (request
         selectedNode: z.string().min(1).max(128).optional(),
       })
       .parse(await context.req.json())
+    const connection = parseMcpConnectionMessage(body.message)
+    if (connection) return context.json(await service.connectMcpDirect(actor, context.req.param('flowId'), body.requestId, connection.url, connection.token))
     const turn = service.start(actor, context.req.param('flowId'), body.requestId, body.message, body.selectedNode)
     return context.json({ turnId: turn.turnId, status: turn.status }, 202)
   })
   app.post('/:flowId/copilot/stop', async (context) => {
     const actor = await authenticate(context.req.raw)
     return context.json({ accepted: service.stop(actor, context.req.param('flowId')) })
+  })
+  app.post('/:flowId/copilot/mcp/connect', async (context) => {
+    const actor = await authenticate(context.req.raw)
+    const body = z
+      .strictObject({
+        requestId: z.string().min(1).max(128),
+        url: z.string().url().max(2048),
+        token: z.string().min(1).max(8192),
+      })
+      .parse(await context.req.json())
+    return context.json(await service.connectMcpDirect(actor, context.req.param('flowId'), body.requestId, body.url, body.token))
   })
   app.post('/:flowId/copilot/mcp/:connectionId/auth', async (context) => {
     const actor = await authenticate(context.req.raw)

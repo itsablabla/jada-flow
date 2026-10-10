@@ -7,7 +7,7 @@ import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { expect, it, onTestFinished } from 'vitest'
-import { redactChatSecrets } from '../common/chat-secrets.ts'
+import { parseMcpConnectionMessage, redactChatSecrets } from '../common/chat-secrets.ts'
 import { CopilotService } from '../node/application/copilot-service.ts'
 import { createLlm } from '../node/deployment/llm.ts'
 import { McpConnections } from '../node/deployment/mcp-connections.ts'
@@ -202,6 +202,55 @@ it('redacts bearer and underscore-prefixed keys in legacy transcript text', () =
   expect(redactChatSecrets('Bearer\nsynthetic-fixture-token')).toBe('Bearer [redacted]')
   expect(redactChatSecrets('sk_' + 'a'.repeat(32))).toBe('[redacted credential]')
   expect(redactChatSecrets('add mcp https://fixture.example/mcp')).toBe('add mcp https://fixture.example/mcp')
+})
+
+it('parses an explicit URL and bearer credential in one composer submission', () => {
+  for (const input of [
+    'add mcp https://fixture.example/mcp\nBearer synthetic-fixture-token',
+    'add https://fixture.example/mcp Authorization: Bearer synthetic-fixture-token',
+    'Connect MCP server https://fixture.example/mcp\nbearer synthetic-fixture-token',
+  ])
+    expect(parseMcpConnectionMessage(input)).toEqual({ url: 'https://fixture.example/mcp', token: 'synthetic-fixture-token' })
+  for (const input of [
+    'add mcp https://fixture.example/mcp Bearer [redacted]',
+    'do not add https://fixture.example/mcp Bearer synthetic-fixture-token',
+    'Bearer synthetic-fixture-token',
+  ])
+    expect(parseMcpConnectionMessage(input)).toBeUndefined()
+})
+
+it('connects directly without a second prompt, model call, or plaintext transcript credential', async () => {
+  let discoveryCalls = 0
+  const f = await fixture(async (_url, token, method) => {
+    expect(token).toBe('synthetic-direct-token')
+    expect(method).toBe('list')
+    discoveryCalls++
+    return tools
+  })
+  const store = new CopilotStore(f.db.connection)
+  const copilot = new CopilotService(
+    store,
+    f.service.control,
+    () => undefined,
+    async () => {
+      throw new Error('Model must not receive connection credentials')
+    },
+    f.mcp,
+  )
+  const result = await copilot.connectMcpDirect('operator', f.flow.flowId, 'direct', 'https://fixture.example/mcp', 'synthetic-direct-token')
+  expect(result.status).toBe('completed')
+  expect(discoveryCalls).toBe(1)
+  expect(JSON.stringify(store.list('operator', f.flow.flowId))).not.toContain('synthetic-direct-token')
+  expect(JSON.stringify(copilot.read('operator', f.flow.flowId))).not.toContain('synthetic-direct-token')
+  expect(f.mcp.rows(f.flow.flowId)[0]?.encrypted_token).not.toContain('synthetic-direct-token')
+  expect((await copilot.connectMcpDirect('operator', f.flow.flowId, 'direct', 'https://fixture.example/mcp', 'synthetic-direct-token')).status).toBe(
+    'completed',
+  )
+  expect(discoveryCalls).toBe(1)
+  await expect(copilot.connectMcpDirect('foreign', f.flow.flowId, 'foreign', 'https://fixture.example/mcp', 'synthetic-direct-token')).rejects.toThrow()
+  expect(discoveryCalls).toBe(1)
+  expect(f.service.control.getFlow(f.flow.flowId).draftRevisionId).toBe(f.flow.draftRevisionId)
+  copilot.close()
 })
 
 it('uses a real MCP initialize, notification, paginated tools/list and tools/call handshake', async () => {

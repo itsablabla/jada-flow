@@ -8,6 +8,7 @@ import { mcpTools } from '@oomol-lab/open-flow/mcp'
 import { createHash, randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { redactChatSecrets } from '../../common/chat-secrets.ts'
+import { publicMcpUrl } from '../deployment/mcp-transport.ts'
 import { runPipali } from '../deployment/pipali-client.ts'
 import { createPipaliHistory } from '../deployment/pipali-contract.ts'
 import { ControlError } from '../error.ts'
@@ -52,6 +53,63 @@ export class CopilotService {
     this.control.authorize(actorId, { flowId })
     if (!this.mcp) throw new Error('MCP connections are unavailable.')
     return this.mcp.authorize(flowId, connectionId, token, signal)
+  }
+
+  async connectMcpDirect(actorId: string, flowId: string, requestId: string, url: string, token: string) {
+    this.control.authorize(actorId, { flowId })
+    if (!this.mcp) throw new Error('MCP connections are unavailable.')
+    const digest = createHash('sha256')
+      .update(JSON.stringify({ url, credentialDigest: createHash('sha256').update(token).digest('hex') }))
+      .digest('hex')
+    const previous = this.store.find(actorId, flowId, requestId)
+    if (previous) {
+      if (previous.requestDigest !== digest) throw new Error('Request identity was already used for different content.')
+      return { turnId: previous.turnId, status: previous.status }
+    }
+    const key = `${actorId}:${flowId}`
+    if (this.active.has(key) || this.active.size >= 2) throw new Error('A copilot operation is already running. Try again after it finishes.')
+    // Validate the URL before it enters the transcript: credentials in URLs are never accepted.
+    const safeUrl = publicMcpUrl(url).href
+    const controller = new AbortController()
+    const turn: CopilotTurn = {
+      turnId: randomUUID(),
+      flowId,
+      actorId,
+      requestId,
+      requestDigest: digest,
+      status: 'running',
+      message: `Connect MCP ${safeUrl} (credential supplied securely)`,
+      answer: '',
+      question: null,
+      revisionId: null,
+      createdAt: Date.now(),
+    }
+    this.active.set(key, controller)
+    try {
+      this.store.add(turn)
+      const connection = await this.mcp.connectWithToken(flowId, safeUrl, token, controller.signal)
+      controller.signal.throwIfAborted()
+      const revision = this.control.getFlow(flowId).draftRevisionId
+      this.store.finish(
+        turn.turnId,
+        'completed',
+        `Connected ${connection.label}. ${connection.toolCount} tools discovered. The credential was stored securely, not in this conversation. Tell me how the Agent should use these tools. Nothing was executed.`,
+        revision,
+      )
+      return { turnId: turn.turnId, status: 'completed', connection }
+    } catch {
+      const status = controller.signal.aborted ? 'canceled' : 'failed'
+      this.store.finish(
+        turn.turnId,
+        status,
+        controller.signal.aborted
+          ? 'Connection attempt stopped.'
+          : 'Could not connect to the MCP server. Check the HTTPS Streamable HTTP URL and token, then paste them together again. No tool was executed.',
+      )
+      return { turnId: turn.turnId, status }
+    } finally {
+      this.active.delete(key)
+    }
   }
 
   stop(actorId: string, flowId: string): boolean {
