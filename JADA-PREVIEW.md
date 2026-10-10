@@ -59,3 +59,7 @@ The shared workbench Manifest relay overrides every Responses request to `reason
 Three focused Python tests cover absent reasoning settings, overriding high effort and summary requests while preserving tools/streaming, and rejecting invalid request bodies. Run `python scripts/test-workbench-model-proxy.py` from `apps/server`.
 
 Following a user-reported failed “make an agent” turn, the endpoint responded successfully to a direct check and a fresh browser authoring request succeeded. The earlier error was discarded by a generic catch handler, so its original cause cannot be established retrospectively. Redacted server-side `copilot.failed` diagnostics now retain the underlying error without displaying secrets in the browser. This is not evidence that changing reasoning effort alone repaired the original failure.
+
+## Composer keyboard controls
+
+Enter submits the copilot message; Shift+Enter inserts a newline. IME composition and held-key repeat events do not submit. Blank messages, pending requests, running turns and missing model configuration are guarded. Browser checks with intercepted API responses verified multiline preservation, a single submission, and each blocked state; normal build, lint and type checks pass.

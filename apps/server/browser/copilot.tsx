@@ -81,7 +81,7 @@ export function CopilotPanel({ flowId, onClose, onConfigure, apiBase = '' }: { f
 
   async function send(event: FormEvent) {
     event.preventDefault()
-    if (!draft.trim() || pending || running) return
+    if (!draft.trim() || pending || running || !configured) return
     setPending(true)
     following.current = true
     setError('')
@@ -189,14 +189,20 @@ export function CopilotPanel({ flowId, onClose, onConfigure, apiBase = '' }: { f
         )}
         <Textarea
           aria-label="Describe your workflow"
+          aria-description="Enter to send. Shift+Enter for a new line."
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing || event.keyCode === 229) return
+            event.preventDefault()
+            if (!event.repeat && !pending && !running && configured && draft.trim()) event.currentTarget.form?.requestSubmit()
+          }}
           placeholder="Tell Pipali what you want to automate…"
           rows={3}
           disabled={pending}
         />
         <div className="jada-composer-actions">
-          <span>Changes save to this draft. Publishing stays in your control.</span>
+          <span>Enter to send · Shift+Enter for a new line. Changes save to this draft.</span>
           {running ? (
             <Button type="button" variant="outline" onClick={() => void stop()}>
               Stop
